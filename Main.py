@@ -1,65 +1,75 @@
 import ChessEngine as ce
 import chess as ch
 
-class Main:
+class Game:
 
-    def __init__(self, board=ch.Board):
-        self.board=board
+    def __init__(self, Board=ch.Board):
+        self.Board=Board
 
-    #play human move
+    # Play human move
     def playHumanMove(self):
         try:
-            print(self.board.legal_moves)
+            print(self.Board, "\n")
+            # Get user move
+            print(self.Board.legal_moves)
             print("""To undo your last move, type "undo".""")
-            #get human move
             play = input("Your move: ")
+
+            # Undo
             if (play=="undo"):
-                self.board.pop()
-                self.board.pop()
+                self.Board.pop()
+                self.Board.pop()
                 self.playHumanMove()
                 return
-            self.board.push_san(play)
-        except:
+
+            # Add move
+            self.Board.push_san(play) # Reads SAN (Standard Algebraic Notation),
+                                      # converts to a move parseable by python-chess
+
+        except ch.InvalidMoveError:
             self.playHumanMove()
 
-    #play engine move
+    # Play bot move
     def playEngineMove(self, maxDepth, color):
-        engine = ce.Engine(self.board, maxDepth, color)
-        self.board.push(engine.getBestMove())
+        print(self.Board, "\n")
+        engine = ce.Engine(self.Board, maxDepth, color)
+        self.Board.push(engine.getBestMove())
 
-    #start a game
     def startGame(self):
-        #get human player's color
-        color=None
+
+        # Pre-game: Initialize settings
+        color = None
         while(color!="b" and color!="w"):
             color = input("""Play as (type "b" or "w"): """)
-        maxDepth=None
-        while(isinstance(maxDepth, int)==False):
-            maxDepth = int(input("""Choose depth: """))
-        if color=="b":
-            while (self.board.is_checkmate()==False):
-                print("The engine is thinking...")
-                self.playEngineMove(maxDepth, ch.WHITE)
-                print(self.board)
-                self.playHumanMove()
-                print(self.board)
-            print(self.board)
-            print(self.board.outcome())    
-        elif color=="w":
-            while (self.board.is_checkmate()==False):
-                print(self.board)
-                self.playHumanMove()
-                print(self.board)
-                print("The engine is thinking...")
-                self.playEngineMove(maxDepth, ch.BLACK)
-            print(self.board)
-            print(self.board.outcome())
-        #reset the board
-        self.board.reset
-        #start another game
-        self.startGame()
 
-#create an instance and start a game
-newBoard= ch.Board()
-game = Main(newBoard)
-bruh = game.startGame()
+        maxDepth = None
+        while( isinstance(maxDepth, int) == False ):
+            maxDepth = int(input("""Choose depth: """))
+
+        # (Play first move if white)
+        if color == "w":
+            self.playHumanMove()
+            print(self.Board) 
+
+        # Main gameplay loop
+        while ( self.Board.is_checkmate() == False ):
+            # Bot move first
+            print("The engine is thinking...")
+            self.playEngineMove(maxDepth, ch.WHITE)
+
+            # Bugfix: Check is_checkmate() after bot move
+
+            # Human move last
+            self.playHumanMove()
+
+        # Game end
+        print(self.Board)
+        print(self.Board.outcome())
+
+# (Equivalent to driver.cpp)
+# Only runs if played directly from Main.py
+# and not if included as a library
+if __name__ == "__main__":
+    newBoard = ch.Board()
+    newGame = Game(newBoard)
+    newGame.startGame()

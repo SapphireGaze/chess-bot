@@ -1,77 +1,100 @@
-import chess as ch
-import random as rd
+import chess as ch # AKA python-chess
+import random
 
 class Engine:
+    # Properties:
+        # - Board 
+        #   - (class object imported from python-chess; not defined by us)
+        #   - legal_moves: property of Board
+        # - color (b/w)
+        # - maxDepth (higher depth = bigger brain, slower computing time)
 
-    def __init__(self, board, maxDepth, color):
-        self.board=board
-        self.color=color
-        self.maxDepth=maxDepth
+    # Methods:
+        # public:
+        #   - getBestMove() (called by Main.py)
+        #       - calls recursive search
+        #       - returns Move with best evaluation
+        # private: 
+        #   - search(Move candidate, int depth)
+        #       - 
+
+    # Constructors:
+        # - Parameterized: (Board, maxDepth, color)
+
+    def __init__(self, Board, maxDepth, color):
+        self.Board = Board
+        self.color = color
+        self.maxDepth = maxDepth
+        self.pieceValue = {
+            ch.PAWN : 1,
+            ch.ROOK : 5.1,
+            ch.BISHOP : 3.33,
+            ch.KNIGHT : 3.2,
+            ch.QUEEN : 8.8 } # based on Hans Berliner System
     
     def getBestMove(self):
-        return self.engine(None, 1)
+        return self.search(candidate = None, depth = 1) # self is passed automatically
 
-    def evalFunct(self):
-        compt = 0
-        #Sums up the material values
+    def evaluate(self):
+        score = 0
+
+        # Iternate through entire board, sum up piece values of each square
         for i in range(64):
-            compt+=self.squareResPoints(ch.SQUARES[i])
-        compt += self.mateOpportunity() + self.openning() + 0.001*rd.random()
-        return compt
+            score += self.evalSquareValue(ch.SQUARES[i])
 
-    def mateOpportunity(self):
-        if (self.board.legal_moves.count()==0):
-            if (self.board.turn == self.color):
+        # Misc. score improvements - ADD MORE LOGIC HERE
+        score += (
+              self.evalMateOpportunity()
+            + self.evalOpening()
+            + (0.001 * random.random()) # ensure bot doesn't play exact same moves in each scenario - less predictable
+        )
+
+        return score
+
+
+    def evalMateOpportunity(self):
+        ### Stalemate or checkmate is worst outcome ###
+
+        if (self.Board.legal_moves.count()==0):
+            if (self.Board.turn == self.color):
                 return -999
             else:
                 return 999
         else:
             return 0
 
-    #to make the engine developp in the first moves
-    def openning(self):
-        if (self.board.fullmove_number<10):
-            if (self.board.turn == self.color):
-                return 1/30 * self.board.legal_moves.count()
+
+    # Prioritize the bot developing the opening
+    def evalOpening(self):
+        if (self.Board.fullmove_number<10):
+            if (self.Board.turn == self.color):
+                return 1/30 * self.Board.legal_moves.count()
             else:
-                return -1/30 * self.board.legal_moves.count()
+                return -1/30 * self.Board.legal_moves.count()
         else:
             return 0
 
-    #Takes a square as input and 
-    #returns the corresponding Hans Berliner's
-    #system value of it's resident
-    def squareResPoints(self, square):
-        pieceValue = 0
-        if(self.board.piece_type_at(square) == ch.PAWN):
-            pieceValue = 1
-        elif (self.board.piece_type_at(square) == ch.ROOK):
-            pieceValue = 5.1
-        elif (self.board.piece_type_at(square) == ch.BISHOP):
-            pieceValue = 3.33
-        elif (self.board.piece_type_at(square) == ch.KNIGHT):
-            pieceValue = 3.2
-        elif (self.board.piece_type_at(square) == ch.QUEEN):
-            pieceValue = 8.8
-
-        if (self.board.color_at(square)!=self.color):
-            return -pieceValue
-        else:
-            return pieceValue
-
+    # Takes a square as input and returns
+    # the corresponding Hans Berliner's
+    # system value of the piece atop it
+    def evalSquareValue(self, square):
+        pieceValue = pieceValues[self.Board.piece_type_at(square)]
+        ishumanColor = self.Board.color_at(square) == self.color
+        return pieceValue if ishumanColor else -pieceValue # python ternary operator
         
-    def engine(self, candidate, depth):
+
+    # Recursive search function
+    def search(self, candidate, depth):
         
         #reached max depth of search or no possible moves
-        if ( depth == self.maxDepth
-        or self.board.legal_moves.count() == 0):
-            return self.evalFunct()
+        if ( depth == self.maxDepth or self.Board.legal_moves.count() == 0 ):
+            return self.evaluate()
         
         else:
-            #get list of legal moves of the current position
-            moveListe = list(self.board.legal_moves)
+            # Get list of legal moves of the current position
+            moveList = list(self.Board.legal_moves)
             
-            #initialise newCandidate
+            # Initialise newCandidate
             newCandidate = None
             #(uneven depth means engine's turn)
             if(depth % 2 != 0):
@@ -79,23 +102,27 @@ class Engine:
             else:
                 newCandidate = float("inf")
             
-            #analyse board after deeper moves
-            for i in moveListe:
+            # Analyze board after deeper moves
+            for i in moveList:
 
-                #Play move i
-                self.board.push(i)
+                # TEMPORARILY play move i
+                self.Board.push(i)
 
                 #Get value of move i (by exploring the repercussions)
-                value = self.engine(newCandidate, depth + 1) 
+                value = self.search(newCandidate, depth + 1) 
 
-                #Basic minmax algorithm:
-                #if maximizing (engine's turn)
+
+                # Basic minimax algorithm:
+                # if bot's turn, maximize value
+                # if human's turn, minimize value
+
+                # Bot - Maximize
                 if(value > newCandidate and depth % 2 != 0):
-                    #need to save move played by the engine
                     if (depth == 1):
-                        move=i
+                        move = i
                     newCandidate = value
-                #if minimizing (human player's turn)
+
+                # Human - Minimize
                 elif(value < newCandidate and depth % 2 == 0):
                     newCandidate = value
 
@@ -104,60 +131,23 @@ class Engine:
                 if (candidate != None
                  and value < candidate
                  and depth % 2 == 0):
-                    self.board.pop()
+                    self.Board.pop()
                     break
+
                 #(if previous move was made by the human player)
                 elif (candidate != None 
-                and value > candidate 
-                and depth % 2 != 0):
-                    self.board.pop()
+                 and value > candidate 
+                 and depth % 2 != 0):
+                    self.Board.pop()
                     break
                 
-                #Undo last move
-                self.board.pop()
+                # Undo TEMP move
+                self.Board.pop()
 
-            #Return result
+            # Return result
             if (depth>1):
-                #eturn value of a move in the tree
+                # Return value of a move in the tree
                 return newCandidate
             else:
-                #return the move (only on first move)
+                # Return the move (only on first move)
                 return move
-
-
-
-  
-
-
-
-            
-            
-
-
-        
-
-
-        
-
-
-
-            
-
-
-
-
-
-
-        
-        
-
-
-
-
-        
-
-
-
-
-    
-    
