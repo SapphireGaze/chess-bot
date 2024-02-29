@@ -25,15 +25,18 @@ class Engine:
         self.Board = Board
         self.color = color
         self.maxDepth = maxDepth
-        self.pieceValue = {
+        self.pieceValues = {
             ch.PAWN : 1,
             ch.ROOK : 5.1,
             ch.BISHOP : 3.33,
             ch.KNIGHT : 3.2,
-            ch.QUEEN : 8.8 } # based on Hans Berliner System
+            ch.QUEEN : 8.8,
+            ch.KING : 10_000} # based on Hans Berliner System
     
     def getBestMove(self):
-        return self.search(candidate = None, depth = 1) # self is passed automatically
+        bestMove, bestValue = self.search(candidate = None, depth = 1) # self is passed automatically
+        print(bestMove, bestValue)
+        return bestMove
 
     def evaluate(self):
         score = 0
@@ -48,7 +51,6 @@ class Engine:
             + self.evalOpening()
             + (0.001 * random.random()) # ensure bot doesn't play exact same moves in each scenario - less predictable
         )
-
         return score
 
 
@@ -78,10 +80,13 @@ class Engine:
     # the corresponding Hans Berliner's
     # system value of the piece atop it
     def evalSquareValue(self, square):
-        pieceValue = pieceValues[self.Board.piece_type_at(square)]
-        ishumanColor = self.Board.color_at(square) == self.color
-        return pieceValue if ishumanColor else -pieceValue # python ternary operator
-        
+        piece_type = self.Board.piece_type_at(square)
+        if piece_type:
+            pieceValue = self.pieceValues[piece_type]
+            ishumanColor = self.Board.color_at(square) == self.color
+            return pieceValue if ishumanColor else -pieceValue # python ternary operator
+        return 0
+            
 
     # Recursive search function
     def search(self, candidate, depth):
@@ -108,9 +113,8 @@ class Engine:
                 # TEMPORARILY play move i
                 self.Board.push(i)
 
-                #Get value of move i (by exploring the repercussions)
+                # Get value of move i (by exploring the repercussions)
                 value = self.search(newCandidate, depth + 1) 
-
 
                 # Basic minimax algorithm:
                 # if bot's turn, maximize value
@@ -126,8 +130,8 @@ class Engine:
                 elif(value < newCandidate and depth % 2 == 0):
                     newCandidate = value
 
-                #Alpha-beta prunning cuts: 
-                #(if previous move was made by the engine)
+                # Alpha-beta pruning cuts: 
+                # (if previous move was made by the engine)
                 if (candidate != None
                  and value < candidate
                  and depth % 2 == 0):
@@ -145,9 +149,9 @@ class Engine:
                 self.Board.pop()
 
             # Return result
-            if (depth>1):
+            if (depth > 1):
                 # Return value of a move in the tree
                 return newCandidate
             else:
                 # Return the move (only on first move)
-                return move
+                return (move, newCandidate)
