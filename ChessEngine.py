@@ -24,17 +24,18 @@ class Engine:
     def __init__(self, Board, maxDepth, color):
         self.Board = Board
         self.color = color
-        self.maxDepth = maxDepth
+        self.maxDepth = maxDepth # depth = ply
         self.pieceValues = {
             ch.PAWN : 1,
             ch.ROOK : 5.1,
             ch.BISHOP : 3.33,
             ch.KNIGHT : 3.2,
             ch.QUEEN : 8.8,
-            ch.KING : 10_000} # based on Hans Berliner System
+            ch.KING : 10_000
+            } # based on Hans Berliner System
     
     def getBestMove(self):
-        bestMove, bestValue = self.search(candidate = None, depth = 1) # self is passed automatically
+        bestMove, bestValue = self.search(depth = 1, alpha = float("-inf"), beta = float("inf")) # self is passed automatically
         print(bestMove, bestValue)
         return bestMove
 
@@ -53,7 +54,6 @@ class Engine:
         )
         return score
 
-
     def evalMateOpportunity(self):
         ### Stalemate or checkmate is worst outcome ###
 
@@ -65,9 +65,8 @@ class Engine:
         else:
             return 0
 
-
-    # Prioritize the bot developing the opening
     def evalOpening(self):
+        # Prioritize the bot developing the opening
         if (self.Board.fullmove_number<10):
             if (self.Board.turn == self.color):
                 return 1/30 * self.Board.legal_moves.count()
@@ -76,10 +75,11 @@ class Engine:
         else:
             return 0
 
-    # Takes a square as input and returns
-    # the corresponding Hans Berliner's
-    # system value of the piece atop it
     def evalSquareValue(self, square):
+        # Takes a square as input and returns
+        # the corresponding Hans Berliner's
+        # system value of the piece atop it
+
         piece_type = self.Board.piece_type_at(square)
         if piece_type:
             pieceValue = self.pieceValues[piece_type]
@@ -87,71 +87,54 @@ class Engine:
             return pieceValue if ishumanColor else -pieceValue # python ternary operator
         return 0
             
-
     # Recursive search function
-    def search(self, candidate, depth):
+    def search(self, depth, alpha, beta):
         
-        #reached max depth of search or no possible moves
-        if ( depth == self.maxDepth or self.Board.legal_moves.count() == 0 ):
-            return self.evaluate()
+        # Reached max depth of search or no possible moves
+        if (depth == self.maxDepth or self.Board.legal_moves.count() == 0):
+            return None, self.evaluate()
+
+        # - Bot plays every odd turn (odd depth)
+        # - When bot plays, it wants to maximize its score
+        # - When it's human's turn, it wants to minize their score
+        is_maximizing = (depth % 2 != 0)
+
+        if is_maximizing:
+            best_value = float("-inf") 
+            best_move = None
+            
+            for move in self.Board.legal_moves:
+                self.Board.push(move)
+                _, value_candidate = self.search(depth + 1, alpha, beta)
         
-        else:
-            # Get list of legal moves of the current position
-            moveList = list(self.Board.legal_moves)
-            
-            # Initialise newCandidate
-            newCandidate = None
-            #(uneven depth means engine's turn)
-            if(depth % 2 != 0):
-                newCandidate = float("-inf")
-            else:
-                newCandidate = float("inf")
-            
-            # Analyze board after deeper moves
-            for i in moveList:
+                if value_candidate > best_value:
+                    best_move = move
+                    best_value = value_candidate
 
-                # TEMPORARILY play move i
-                self.Board.push(i)
-
-                # Get value of move i (by exploring the repercussions)
-                value = self.search(newCandidate, depth + 1) 
-
-                # Basic minimax algorithm:
-                # if bot's turn, maximize value
-                # if human's turn, minimize value
-
-                # Bot - Maximize
-                if(value > newCandidate and depth % 2 != 0):
-                    if (depth == 1):
-                        move = i
-                    newCandidate = value
-
-                # Human - Minimize
-                elif(value < newCandidate and depth % 2 == 0):
-                    newCandidate = value
-
-                # Alpha-beta pruning cuts: 
-                # (if previous move was made by the engine)
-                if (candidate != None
-                 and value < candidate
-                 and depth % 2 == 0):
+                if best_value > beta:
                     self.Board.pop()
                     break
-
-                #(if previous move was made by the human player)
-                elif (candidate != None 
-                 and value > candidate 
-                 and depth % 2 != 0):
-                    self.Board.pop()
-                    break
-                
-                # Undo TEMP move
+                alpha = max(alpha, best_value)
                 self.Board.pop()
 
-            # Return result
-            if (depth > 1):
-                # Return value of a move in the tree
-                return newCandidate
-            else:
-                # Return the move (only on first move)
-                return (move, newCandidate)
+            return best_move, best_value
+
+        elif not is_maximizing:
+            best_value = float("inf")
+            best_move = None
+
+            for move in self.Board.legal_moves:
+                self.Board.push(move)
+                _, value_candidate = self.search(depth + 1, alpha, beta)
+
+                if value_candidate < best_value:
+                    best_move = move
+                    best_value = value_candidate
+
+                if best_value < alpha:
+                    self.Board.pop()
+                    break
+                beta = min(beta, best_value)
+                self.Board.pop()
+
+            return best_move, best_value
