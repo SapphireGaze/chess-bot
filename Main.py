@@ -1,4 +1,4 @@
-import ChessEngine as ce
+import ChessBot as cb
 import chess as ch
 import pygame
 from pygame.locals import *
@@ -87,10 +87,10 @@ def main(Board):
 
     # Game start
     while True:
-        # Engine play
+        # Bot play
         if Board.turn == bot_color:
-            engine = ce.Engine(Board, max_depth, bot_color)
-            Board.push(engine.getBestMove())
+            bot = cb.Bot(Board, max_depth, bot_color)
+            Board.push(bot.getBestMove())
             resetScreen()
             update(Board)
 
@@ -166,10 +166,10 @@ def main(Board):
 
     # Game end - Wait for user input
     while True:
-        # Engine play
+        # Bot play
         if Board.turn == bot_color:
-            engine = ce.Engine(Board, max_depth, bot_color)
-            Board.push(engine.getBestMove())
+            Bot = ce.Bot(Board, max_depth, bot_color)
+            Board.push(Bot.getBestMove())
             resetScreen()
             update(Board)
 

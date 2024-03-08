@@ -1,7 +1,7 @@
 import chess as ch # AKA python-chess
 import random
 
-class Engine:
+class Bot:
     # Properties:
         # - class: Board 
         #   - (class object imported from python-chess; not defined by us)
