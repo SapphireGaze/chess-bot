@@ -168,7 +168,7 @@ def main(Board):
     while True:
         # Bot play
         if Board.turn == bot_color:
-            Bot = ce.Bot(Board, max_depth, bot_color)
+            Bot = cd.Bot(Board, max_depth, bot_color)
             Board.push(Bot.getBestMove())
             resetScreen()
             update(Board)
